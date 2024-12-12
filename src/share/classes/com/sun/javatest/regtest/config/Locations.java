@@ -166,6 +166,7 @@ public final class Locations {
     private final Path absTestModulesDir;
     private final Path absTestWorkDir;
     private final Path relLibDir;
+    private final Path testImageRoot;
     private final List<LibLocn> libList;
 
     /**
@@ -183,6 +184,7 @@ public final class Locations {
         systemModules = params.getTestJDK().getSystemModules(params, logger);
         jtpath = params.getJavaTestClassPath();
         testJDK = params.getTestJDK();
+        testImageRoot = params.getTestImageRoot();
 
         Version v = testSuite.getRequiredVersion();
         boolean useUniqueClassDir = (v.version != null)
@@ -315,7 +317,13 @@ public final class Locations {
             Path absLibSrcDir = absLib;
             Path absLibClsDir = absBaseClsDir.resolve(relLib).normalize();
             LibLocn.Kind kind = getDirKind(absLibSrcDir);
-            return new LibLocn(lib, absLibSrcDir, absLibClsDir, kind);
+            LibLocn libLocn = new LibLocn(lib, absLibSrcDir, absLibClsDir, kind);
+            var properties = LibraryProperties.of(libLocn);
+            if (properties.getPrecompiledJar() != null && testImageRoot != null) {
+                Path jarPath = testImageRoot.resolve(properties.getPrecompiledJar());
+                return new LibLocn(lib, absLibSrcDir, jarPath, LibLocn.Kind.PRECOMPILED_JAR);
+            }
+            return libLocn;
         }
     }
 
@@ -606,6 +614,11 @@ public final class Locations {
             for (LibLocn l: libList) {
                 if (l.kind == LibLocn.Kind.PACKAGE) {
                     searchLocns.add(l);
+                }
+                if(l.kind == LibLocn.Kind.PRECOMPILED_JAR) {
+                    if (l.absSrcDir != null) {
+                        searchLocns.add(new LibLocn(l.name, l.absSrcDir, absTestClsDir, LibLocn.Kind.PACKAGE));
+                    }
                 }
             }
         }

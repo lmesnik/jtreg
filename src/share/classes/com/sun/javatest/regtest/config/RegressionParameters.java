@@ -628,6 +628,7 @@ public final class RegressionParameters
     private static final String REPORTDIR = ".reportDir";
     private static final String EXCLUSIVE_LOCK = ".exclLock";
     private static final String NATIVEDIR = ".nativeDir";
+    private static final String TESTIMAGE = ".testImageRoot";
     private static final String TIMEOUT_HANDLER = ".timeoutHandler";
     private static final String TIMEOUT_HANDLER_PATH = ".timeoutHandlerPath";
     private static final String TIMEOUT_HANDLER_TIMEOUT = ".timeoutHandlerTimeout";
@@ -711,6 +712,10 @@ public final class RegressionParameters
             v = data.get(prefix + NATIVEDIR);
             if (v != null)
                 setNativeDir(Path.of(v));
+
+            v = data.get(prefix + TESTIMAGE);
+            if (v != null)
+                setTestImageRoot(Path.of(v));
 
             v = data.get(prefix + TIMEOUT_HANDLER);
             if (v != null)
@@ -800,6 +805,9 @@ public final class RegressionParameters
 
         if (nativeDir != null)
             data.put(prefix + NATIVEDIR, nativeDir.toString());
+
+        if (testImageRoot != null)
+            data.put(prefix + TESTIMAGE, testImageRoot.toString());
 
         if (timeoutHandlerClassName != null)
             data.put(prefix + TIMEOUT_HANDLER, timeoutHandlerClassName);
@@ -1224,7 +1232,17 @@ public final class RegressionParameters
         return nativeDir;
     }
 
+    public void setTestImageRoot(Path testImageRoot) {
+        this.testImageRoot = testImageRoot;
+    }
+
+    public Path getTestImageRoot() {
+        return testImageRoot;
+    }
+
     private Path nativeDir;
+
+    private Path testImageRoot;
 
     //---------------------------------------------------------------------
 
@@ -1438,6 +1456,7 @@ public final class RegressionParameters
             put(map, "compile.jdk", getCompileJDK(), JDK::getAbsolutePath);
             put(map, "test.timeout.factor", getTimeoutFactor(), String::valueOf);
             put(map, "test.nativepath", getNativeDir(), p -> p.toAbsolutePath().toString());
+            put(map, "test.testimage.root", getTestImageRoot(), p -> p.toAbsolutePath().toString());
             put(map, "test.root", getTestSuite().getRootDir(), File::getAbsolutePath);
             basicTestProperties = map;
         }

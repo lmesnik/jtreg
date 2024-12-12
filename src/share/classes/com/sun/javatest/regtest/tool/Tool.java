@@ -46,7 +46,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -702,6 +701,21 @@ public class Tool {
                     throw new BadArgs(i18n, "main.cantCreateLockFile", arg);
                 }
                 exclusiveLockArg = f.toPath();
+            }
+        },
+
+        new Option(STD, MAIN, "", "-testimage") {
+            @Override
+            public void process(String opt, String arg) throws BadArgs {
+                // TODO fix error messages
+                if (arg.contains(File.pathSeparator))
+                    throw new BadArgs(i18n, "main.nativePathultiplePath", arg);
+                File f = new File(arg);
+                if (!f.exists())
+                    throw new BadArgs(i18n, "main.nativePathNotExist", arg);
+                if (!f.isDirectory())
+                    throw new BadArgs(i18n, "main.nativePathNotDir", arg);
+               testImageRootArg = f.toPath();
             }
         },
 
@@ -1842,6 +1856,9 @@ public class Tool {
             if (nativeDirArg != null)
                 rp.setNativeDir(nativeDirArg);
 
+            if (testImageRootArg != null) {
+                rp.setTestImageRoot(testImageRootArg);
+            }
             rp.setUseWindowsSubsystemForLinux(useWindowsSubsystemForLinux);
 
             rp.setVerbose(verbose);
@@ -2447,6 +2464,7 @@ public class Tool {
     private IgnoreKind ignoreKind;
     private List<Path> classPathAppendArg = new ArrayList<>();
     private Path nativeDirArg;
+    private Path testImageRootArg;
     private Boolean useWindowsSubsystemForLinux;
     private boolean jitFlag = true;
     private Help help;

@@ -36,14 +36,17 @@ import java.util.Properties;
  */
 public final class LibraryProperties {
     private final boolean enablePreview;
+    private final String precompiledJar;
 
-    public LibraryProperties(boolean enablePreview) {
+    public LibraryProperties(boolean enablePreview, String precompiledJar) {
         this.enablePreview = enablePreview;
+        this.precompiledJar = precompiledJar;
     }
 
     public static LibraryProperties of(Locations.LibLocn libLocn) throws UncheckedIOException {
         // default values being used when no LIBRARY.properties is present
         boolean enablePreview = false;
+        String precompiledJar = null;
 
         // read LIBRARY.properties file and initialize fields accordingly
         Path root = libLocn.absSrcDir;
@@ -57,16 +60,24 @@ public final class LibraryProperties {
                     throw new UncheckedIOException("Reading from file failed: " + file.toUri(), exception);
                 }
                 enablePreview = initEnablePreview(properties);
+                precompiledJar = initPrecompiledJar(properties);
             }
         }
-        return new LibraryProperties(enablePreview);
+        return new LibraryProperties(enablePreview, precompiledJar);
     }
 
     private static boolean initEnablePreview(Properties properties) {
         return Boolean.parseBoolean(properties.getProperty("enablePreview", "false"));
     }
 
+    private static String initPrecompiledJar(Properties properties) {
+        String precompiledJar = properties.getProperty("precompiledJar");
+        return precompiledJar;
+    }
+
     public boolean isEnablePreview() {
         return enablePreview;
     }
+
+    public String getPrecompiledJar() { return precompiledJar; }
 }
