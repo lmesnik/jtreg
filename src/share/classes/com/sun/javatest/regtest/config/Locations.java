@@ -75,12 +75,22 @@ public final class Locations {
         public final Path absSrcDir;
         public final Path absClsDir;
         public final Kind kind;
+        public final LibraryProperties properties;
 
         LibLocn(String name, Path absSrcDir, Path absClsDir, Kind kind) {
             this.name = name;
             this.absSrcDir = absSrcDir;
             this.absClsDir = absClsDir;
             this.kind = kind;
+            this.properties = LibraryProperties.privateLibraryProperties();
+        }
+
+        LibLocn(String name, Path absSrcDir, Path absClsDir, LibraryProperties properties) {
+            this.name = name;
+            this.absSrcDir = absSrcDir;
+            this.absClsDir = absClsDir;
+            this.kind = Kind.PACKAGE;
+            this.properties = properties;
         }
 
         public boolean isLibrary() {
@@ -89,6 +99,10 @@ public final class Locations {
 
         public boolean isTest() {
             return name == null;
+        }
+
+        public LibraryProperties getProperties() {
+            return properties;
         }
 
         @Override
@@ -166,6 +180,7 @@ public final class Locations {
     private final Path absTestModulesDir;
     private final Path absTestWorkDir;
     private final Path relLibDir;
+    private final Path absSharedLibsRootPath;
     private final List<LibLocn> libList;
 
     /**
@@ -210,6 +225,7 @@ public final class Locations {
         Path relTestWorkDir = relTestDir.resolve(uniqueTestSubDir);
         absTestWorkDir = workDirRoot.resolve(relTestWorkDir);
 
+        absSharedLibsRootPath = getThreadSafeDir(workDirRoot.resolve("libs"), params.getConcurrency());
         absBaseClsDir = getThreadSafeDir(workDirRoot.resolve("classes"), params.getConcurrency());
         Path relTestClsDir = (packageRoot != null) ? Path.of(packageRoot)
                 : useUniqueClassDir ? relTestDir.resolve(uniqueTestSubDir)
@@ -228,8 +244,22 @@ public final class Locations {
         libList = new ArrayList<>();
         String libs = td.getParameter("library");
         for (String lib: StringUtils.splitWS(libs)) {
-            libList.add(getLibLocn(td, lib));
+            LibLocn libLocn = getLibLocn(td, lib);
+            for(String dep: libLocn.properties.getDependencies()) {
+          //      addDependendLibLocns(dep);
+            }
+            libList.add(libLocn);
         }
+    }
+
+    void addDependendLibLocns(String libName) throws Fault {
+         LibLocn libLocn = createLibLocn(libName, absBaseSrcDir, absTestClsDir);
+         for(String dep: libLocn.properties.getDependencies()) {
+            addDependendLibLocns(dep);
+         }
+         if (!libList.contains(libLocn)) {
+             libList.add(libLocn);
+         }
     }
 
     public List<LibLocn> getLibs() {
@@ -248,7 +278,7 @@ public final class Locations {
             String libTail = lib.substring(1);
             checkLibPath(Path.of(libTail));
             if (Files.exists(absBaseSrcDir.resolve(libTail))) {
-                return createLibLocn(lib, absBaseSrcDir, absBaseClsDir);
+                return createLibLocn(lib, absBaseSrcDir, absTestClsDir);
             } else {
                 try {
                     for (File extRootFile: testSuite.getExternalLibRoots(td)) {
@@ -256,7 +286,7 @@ public final class Locations {
                         if (Files.exists(extRoot.resolve(libTail))) {
                             // since absBaseSrcDir/lib does not exist, we can safely
                             // use absBaseClsDir/lib for the compiled classes
-                            return createLibLocn(lib, extRoot, absBaseClsDir);
+                            return createLibLocn(lib, extRoot, absTestClsDir);
                         }
                     }
                 } catch (RegressionTestSuite.Fault e) {
@@ -283,7 +313,7 @@ public final class Locations {
         } else {
             checkLibPath(relLibDir.resolve(lib));
             if (Files.exists(absTestSrcDir.resolve(lib)))
-                return createLibLocn(lib, absTestSrcDir, absBaseClsDir.resolve(relLibDir));
+                return createLibLocn(lib, absTestSrcDir, absTestClsDir.resolve(relLibDir));
         }
         throw new Fault(CANT_FIND_LIB + lib);
     }
@@ -314,6 +344,10 @@ public final class Locations {
                 throw new Fault(BAD_LIB + lib);
             Path absLibSrcDir = absLib;
             Path absLibClsDir = absBaseClsDir.resolve(relLib).normalize();
+            LibraryProperties libraryProperties = LibraryProperties.of(absLibSrcDir);
+            if (libraryProperties.isSharedLibrary()) {
+                return new LibLocn(lib, absLibSrcDir, this.absSharedLibsRootPath, libraryProperties);
+            }
             LibLocn.Kind kind = getDirKind(absLibSrcDir);
             return new LibLocn(lib, absLibSrcDir, absLibClsDir, kind);
         }

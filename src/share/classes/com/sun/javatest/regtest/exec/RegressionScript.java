@@ -26,12 +26,11 @@
 package com.sun.javatest.regtest.exec;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -261,6 +260,17 @@ public class RegressionScript extends Script {
                         msgPW.println("   class directory: " + lib.absClsDir);
                     }
                 }
+                List<LibLocn> libs = locations.getLibs();
+                for(var lib : libs) {
+                    if (!lib.getProperties().isSharedLibrary()) {
+                        continue;
+                    }
+                    if (isLibCompiled) {
+                        continue;
+                    }
+                    compileLibrary(lib);
+                    isLibCompiled = true;
+                }
 
                 while (!actionList.isEmpty()) {
                     Action action = actionList.remove();
@@ -294,6 +304,8 @@ public class RegressionScript extends Script {
             if (e.getCause() != null)
                 msg += " (" + e.getCause() + ")";
             status = error(msg);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         } finally {
             int elapsed = (int) (System.currentTimeMillis() - started);
             int millis = (elapsed % 1000);
@@ -338,6 +350,27 @@ public class RegressionScript extends Script {
         }
     }
 
+    private void compileLibrary(LibLocn lib) throws TestRunException, IOException {
+        System.out.println("XXXXXXXXXXLibrary " + lib.name + " path: " + lib.absSrcDir + " to: " + lib.absClsDir);
+        BuildAction ba = new BuildAction();
+        Map<String, String> buildOpts = new HashMap<>();
+
+        lib.absClsDir.toFile().mkdirs();
+        List<Path> files = Files.walk(lib.absSrcDir)
+                .filter(Files::isRegularFile) // Ensure it's a file
+                .filter(p -> p.toString().endsWith(".java"))
+                .map(lib.absSrcDir::relativize).collect(Collectors.toList());
+        List<String> javaFiles = new ArrayList<>();
+        for (Path path : files) {
+            String libNam = path.toString().replace(".java", "").replace('/', '.');
+            javaFiles.add(libNam);
+            System.out.println("XXXXXXXXXAdding " + path + " as " + libNam);
+        }
+        Status result = ba.build(buildOpts, javaFiles, "Library compilation", this);
+        if (!result.isPassed()) {
+            throw new TestRunException("Fail to compile " + lib.name + " library: " + result);
+        }
+    }
     /**
      * Get the set of source files used by the actions in a test description.
      * @param p  The parameters providing the necessary context
@@ -1343,4 +1376,5 @@ public class RegressionScript extends Script {
     private ScratchDirectory scratchDirectory;
     Locations locations;
 
+    private volatile static boolean isLibCompiled = false;
 }

@@ -56,13 +56,8 @@ import com.sun.javatest.regtest.agent.AStatus;
 import com.sun.javatest.regtest.agent.CompileActionHelper;
 import com.sun.javatest.regtest.agent.JDK_Version;
 import com.sun.javatest.regtest.agent.SearchPath;
-import com.sun.javatest.regtest.config.ExecMode;
-import com.sun.javatest.regtest.config.JDK;
-import com.sun.javatest.regtest.config.JDKOpts;
-import com.sun.javatest.regtest.config.Locations;
+import com.sun.javatest.regtest.config.*;
 import com.sun.javatest.regtest.config.Locations.LibLocn;
-import com.sun.javatest.regtest.config.Modules;
-import com.sun.javatest.regtest.config.ParseException;
 import com.sun.javatest.regtest.exec.RegressionScript.PathKind;
 import com.sun.javatest.regtest.util.StringUtils;
 
@@ -364,10 +359,13 @@ public class CompileAction extends Action {
         }
 
         if (runJavac
-                && !script.disablePreview()
-                && !seenEnablePreview
-                && (script.enablePreview())
-                && (libLocn == null || libLocn.isTest())) {
+                &&
+                (!script.disablePreview()
+                    && !seenEnablePreview
+                    && (script.enablePreview())
+                    && (libLocn == null || libLocn.isTest())
+                )||libLocn.getProperties().enablePreview()
+        ) {
             String version = script.getTestJDKVersion().name();
             // always prepend in order to not mess with variadic arguments
             if (!seenSourceOrRelease) {
@@ -520,7 +518,16 @@ public class CompileAction extends Action {
         } else {
             javacArgs.addPath("--source-path", compilePaths.get(PathKind.SOURCEPATH));
         }
+        LibraryProperties properties = libLocn.getProperties();
+        if (properties.isSharedLibrary()) {
+            for (String module : properties.getRequiredModules()) {
+                javacArgs.add("--add-exports");
+                javacArgs.add(module + "=ALL-UNNAMED");
+            }
 
+            javacArgs.addAll(properties.getJavacOptions());
+        }
+        // Here the compilation path is added
         // Need to refine what it means to put absTestClsDir unconditionally on the compilePath
         SearchPath cp = compilePaths.get(PathKind.CLASSPATH);
         javacArgs.addPath("--class-path", cp);
