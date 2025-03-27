@@ -364,7 +364,7 @@ public class CompileAction extends Action {
                     && !seenEnablePreview
                     && (script.enablePreview())
                     && (libLocn == null || libLocn.isTest())
-                )||libLocn.getProperties().enablePreview()
+                )||(libLocn != null && libLocn.getProperties().enablePreview())
         ) {
             String version = script.getTestJDKVersion().name();
             // always prepend in order to not mess with variadic arguments
@@ -518,7 +518,9 @@ public class CompileAction extends Action {
         } else {
             javacArgs.addPath("--source-path", compilePaths.get(PathKind.SOURCEPATH));
         }
-        LibraryProperties properties = libLocn.getProperties();
+
+        LibraryProperties properties = libLocn == null
+                ? LibraryProperties.privateLibraryProperties() : libLocn.getProperties();
         if (properties.isSharedLibrary()) {
             for (String module: properties.getRequiredModules()) {
                 javacArgs.add("--add-exports");
