@@ -98,11 +98,11 @@ public final class LibraryProperties {
 
             enablePreview = Boolean.parseBoolean(properties.getProperty("enablePreview", "false"));
 
-            String javacOptionsLine = properties.getProperty("javacOptions", "");
-            javacOptions = List.of(javacOptionsLine.split(" "));
+            String javacOptionsLine = properties.getProperty("javacOptions", "").trim();
+            javacOptions = List.of(javacOptionsLine.isEmpty() ? new String[0] : javacOptionsLine.split(" "));
 
             String libRootsLine = properties.getProperty("dependencies", "");
-            dependencies = List.of(libRootsLine.split(" "));
+            dependencies = List.of(libRootsLine.isEmpty() ? new String[0] : libRootsLine.split(" "));
 
         } catch (IOException exception) {
             throw new UncheckedIOException("Reading from file failed: " + libRoot.toUri(), exception);

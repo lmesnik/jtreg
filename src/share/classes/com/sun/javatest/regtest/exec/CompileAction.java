@@ -520,7 +520,7 @@ public class CompileAction extends Action {
         }
         LibraryProperties properties = libLocn.getProperties();
         if (properties.isSharedLibrary()) {
-            for (String module : properties.getRequiredModules()) {
+            for (String module: properties.getRequiredModules()) {
                 javacArgs.add("--add-exports");
                 javacArgs.add(module + "=ALL-UNNAMED");
             }

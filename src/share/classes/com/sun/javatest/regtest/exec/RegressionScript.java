@@ -304,7 +304,7 @@ public class RegressionScript extends Script {
             if (e.getCause() != null)
                 msg += " (" + e.getCause() + ")";
             status = error(msg);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             int elapsed = (int) (System.currentTimeMillis() - started);
